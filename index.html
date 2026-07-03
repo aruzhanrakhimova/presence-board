@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Табло присутствия сотрудников</title>
+<style>
+  :root {
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --text: #1a2233;
+    --muted: #6b7487;
+    --border: #e3e7ef;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --green: #16a34a;
+    --green-bg: #e8f7ee;
+    --red: #dc2626;
+    --red-bg: #fdecec;
+    --amber: #d97706;
+    --amber-bg: #fef3e2;
+    --blue-bg: #e8f0fe;
+    --violet: #7c3aed;
+    --violet-bg: #f1eafd;
+    --gray-bg: #eef0f4;
+    --wa: #25d366;
+    --wa-dark: #1eb857;
+    --radius: 14px;
+    --shadow: 0 1px 3px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* ===== Шапка / табло ===== */
+  .board {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .board-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .board h1 { font-size: 20px; font-weight: 700; }
+  .board .date { font-size: 14px; opacity: .85; margin-top: 4px; text-transform: capitalize; }
+  .counters { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+  .counter {
+    background: rgba(255,255,255,.14);
+    border-radius: 10px;
+    padding: 12px 18px;
+    min-width: 130px;
+    flex: 1;
+  }
+  .counter .num { font-size: 30px; font-weight: 800; line-height: 1.1; }
+  .counter .lbl { font-size: 13px; opacity: .85; margin-top: 2px; }
+  .counter.ok .num { color: #86efac; }
+  .counter.absent .num { color: #fca5a5; }
+  .btn-wa {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--wa); color: #fff;
+    border: none; border-radius: 10px;
+    padding: 11px 16px; font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 18px;
+    transition: background .15s;
+  }
+  .btn-wa:hover { background: var(--wa-dark); }
+
+  /* ===== Панель управления ===== */
+  .toolbar { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .search {
+    flex: 1; min-width: 220px;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--card);
+    outline: none;
+  }
+  .search:focus { border-color: var(--primary); }
+  .btn-add {
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 10px;
+    padding: 11px 18px; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-add:hover { background: var(--primary-dark); }
+
+  .filters { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 99px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .15s;
+  }
+  .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  /* ===== Список сотрудников ===== */
+  .list { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .emp {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .emp-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    flex-wrap: wrap;
+  }
+  .avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; color: #fff;
+    flex-shrink: 0;
+  }
+  .emp-info { flex: 1; min-width: 140px; }
+  .emp-name { font-weight: 600; font-size: 15px; }
+  .emp-dept { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .emp-status { text-align: right; }
+  .badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge.available { background: var(--green-bg); color: var(--green); }
+  .badge.vacation  { background: var(--amber-bg); color: var(--amber); }
+  .badge.sick      { background: var(--red-bg); color: var(--red); }
+  .badge.trip      { background: var(--blue-bg); color: var(--primary); }
+  .badge.remote    { background: var(--violet-bg); color: var(--violet); }
+  .badge.other     { background: var(--gray-bg); color: var(--muted); }
+  .until { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ===== Карточка (раскрытие) ===== */
+  .emp-body { display: none; border-top: 1px solid var(--border); padding: 16px; background: #fbfcfe; }
+  .emp.open .emp-body { display: block; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px; }
+  .absence-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .absence-row .dates { font-size: 13px; color: var(--text); }
+  .absence-row .comment { font-size: 12.5px; color: var(--muted); flex-basis: 100%; }
+  .absence-row .grow { flex: 1; }
+  .icon-btn {
+    border: none; background: none; cursor: pointer;
+    font-size: 15px; padding: 4px 6px; border-radius: 6px;
+    color: var(--muted);
+  }
+  .icon-btn:hover { background: var(--gray-bg); }
+  .icon-btn.wa { color: var(--wa); }
+  .empty-absences { font-size: 13px; color: var(--muted); padding: 6px 0 12px; }
+
+  .add-absence { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .add-absence select, .add-absence input, .add-absence textarea {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13.5px; font-family: inherit; background: var(--card); outline: none; width: 100%;
+  }
+  .add-absence select:focus, .add-absence input:focus { border-color: var(--primary); }
+  .add-absence .full { grid-column: 1 / -1; }
+  .form-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--primary); color: #fff; border: none;
+    border-radius: 8px; padding: 9px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  .btn-danger-link {
+    background: none; border: none; color: var(--red);
+    font-size: 13px; cursor: pointer; margin-left: auto; padding: 9px 6px;
+  }
+  .btn-danger-link:hover { text-decoration: underline; }
+  label.f-label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+
+  /* ===== Модальное окно ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(16,24,40,.45);
+    align-items: center; justify-content: center;
+    padding: 16px; z-index: 50;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card); border-radius: var(--radius);
+    padding: 24px; width: 100%; max-width: 420px;
+    box-shadow: 0 20px 50px rgba(16,24,40,.25);
+  }
+  .modal h2 { font-size: 17px; margin-bottom: 16px; }
+  .modal input {
+    width: 100%; padding: 11px 13px;
+    border: 1px solid var(--border); border-radius: 9px;
+    font-size: 14px; margin-bottom: 12px; outline: none;
+  }
+  .modal input:focus { border-color: var(--primary); }
+  .modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+  .btn-ghost {
+    background: none; border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 16px; font-size: 13.5px; cursor: pointer; color: var(--muted);
+  }
+
+  .empty-list {
+    text-align: center; color: var(--muted);
+    padding: 48px 20px; font-size: 14px;
+    background: var(--card); border: 1px dashed var(--border); border-radius: var(--radius);
+    margin-top: 18px;
+  }
+
+  @media (max-width: 560px) {
+    .add-absence { grid-template-columns: 1fr; }
+    .emp-status { text-align: left; }
+    .board h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Табло -->
+  <div class="board">
+    <div class="board-top">
+      <div>
+        <h1>📋 Табло присутствия сотрудников</h1>
+        <div class="date" id="todayDate"></div>
+      </div>
+    </div>
+    <div class="counters">
+      <div class="counter ok">
+        <div class="num" id="cntAvailable">0</div>
+        <div class="lbl">Доступны сегодня</div>
+      </div>
+      <div class="counter absent">
+        <div class="num" id="cntAbsent">0</div>
+        <div class="lbl">Отсутствуют</div>
+      </div>
+    </div>
+    <button class="btn-wa" id="btnSummary">💬 Отправить сводку на WhatsApp</button>
+  </div>
+
+  <!-- Поиск и добавление -->
+  <div class="toolbar">
+    <input type="text" class="search" id="search" placeholder="Поиск по имени или отделу…">
+    <button class="btn-add" id="btnAddEmp">+ Добавить сотрудника</button>
+  </div>
+
+  <!-- Фильтры -->
+  <div class="filters" id="filters">
+    <button class="chip active" data-filter="all">Все</button>
+    <button class="chip" data-filter="available">Доступны</button>
+    <button class="chip" data-filter="absent">Отсутствуют</button>
+    <button class="chip" data-filter="vacation">Отпуск</button>
+    <button class="chip" data-filter="sick">Больничный</button>
+    <button class="chip" data-filter="trip">Командировка</button>
+    <button class="chip" data-filter="remote">Удалённо</button>
+    <button class="chip" data-filter="other">Другое</button>
+  </div>
+
+  <!-- Список -->
+  <div class="list" id="list"></div>
+
+</div>
+
+<!-- Модалка добавления сотрудника -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>Новый сотрудник</h2>
+    <label class="f-label">ФИО *</label>
+    <input type="text" id="newName" placeholder="Иванова Анна Петровна">
+    <label class="f-label">Отдел / должность</label>
+    <input type="text" id="newDept" placeholder="Канцелярия">
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCancelEmp">Отмена</button>
+      <button class="btn-primary" id="btnSaveEmp">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ===== Константы ===== */
+const TYPES = {
+  vacation: { label: 'Отпуск',       icon: '🏖️', blocks: true  },
+  sick:     { label: 'Больничный',   icon: '🤒', blocks: true  },
+  trip:     { label: 'Командировка', icon: '✈️', blocks: true  },
+  remote:   { label: 'Удалённо',     icon: '🏠', blocks: false },
+  other:    { label: 'Другое',       icon: '📌', blocks: true  },
+};
+const STORAGE_KEY = 'presence-board-roster';
+const PHONE_KEY = 'presence-board-phone';
+const AVATAR_COLORS = ['#2563eb','#7c3aed','#0891b2','#d97706','#16a34a','#dc2626','#db2777','#4f46e5'];
+
+/* ===== Состояние ===== */
+let roster = load();
+let searchQuery = '';
+let activeFilter = 'all';
+let openedId = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* повреждённые данные — начинаем заново */ }
+  return seed();
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(roster));
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function seed() {
+  const today = new Date();
+  const d = (offset) => {
+    const x = new Date(today); x.setDate(x.getDate() + offset);
+    return x.toISOString().slice(0, 10);
+  };
+  return [
+    { id: uid(), name: 'Ахметова Айгерим Сериковна', department: 'Канцелярия', absences: [] },
+    { id: uid(), name: 'Петров Дмитрий Игоревич', department: 'Юридический отдел',
+      absences: [{ id: uid(), type: 'vacation', from: d(-3), to: d(7), comment: 'Ежегодный отпуск' }] },
+    { id: uid(), name: 'Смагулова Динара Болатовна', department: 'Бухгалтерия',
+      absences: [{ id: uid(), type: 'sick', from: d(-1), to: d(3), comment: '' }] },
+    { id: uid(), name: 'Ковалёв Сергей Андреевич', department: 'ИТ-отдел',
+      absences: [{ id: uid(), type: 'remote', from: d(0), to: d(0), comment: 'Работает из дома' }] },
+    { id: uid(), name: 'Нурланова Асель Маратовна', department: 'HR', absences: [] },
+  ];
+}
+
+/* ===== Логика доступности ===== */
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function activeAbsence(emp) {
+  const t = todayStr();
+  // приоритет — блокирующие отсутствия
+  const active = emp.absences.filter(a => a.from <= t && t <= a.to);
+  return active.find(a => TYPES[a.type].blocks) || active[0] || null;
+}
+function isAvailable(emp) {
+  const a = activeAbsence(emp);
+  return !a || !TYPES[a.type].blocks;
+}
+
+/* ===== Форматирование ===== */
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function initials(name) {
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+function avatarColor(id) {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+/* ===== WhatsApp ===== */
+function askPhone() {
+  const saved = localStorage.getItem(PHONE_KEY) || '';
+  const phone = prompt('Номер получателя WhatsApp (в международном формате, например 77011234567).\nОставьте пустым, чтобы выбрать чат вручную:', saved);
+  if (phone === null) return null; // отмена
+  const clean = phone.replace(/[^\d]/g, '');
+  localStorage.setItem(PHONE_KEY, clean);
+  return clean;
+}
+function openWhatsApp(text) {
+  const phone = askPhone();
+  if (phone === null) return;
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+function summaryText() {
+  const absent = roster.filter(e => !isAvailable(e));
+  const lines = [`📋 Сводка отсутствующих на ${fmtDate(todayStr())}:`, ''];
+  if (!absent.length) {
+    lines.push('Все сотрудники на месте ✅');
+  } else {
+    absent.forEach((e, i) => {
+      const a = activeAbsence(e);
+      lines.push(`${i + 1}. ${e.name}${e.department ? ' (' + e.department + ')' : ''} — ${TYPES[a.type].label}, до ${fmtDate(a.to)}`);
+    });
+  }
+  return lines.join('\n');
+}
+function absenceText(emp, a) {
+  return `ℹ️ ${emp.name}${emp.department ? ' (' + emp.department + ')' : ''}: ${TYPES[a.type].label} с ${fmtDate(a.from)} по ${fmtDate(a.to)}${a.comment ? '. ' + a.comment : ''}`;
+}
+
+/* ===== Рендер ===== */
+function render() {
+  // шапка
+  document.getElementById('todayDate').textContent =
+    new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const avail = roster.filter(isAvailable).length;
+  document.getElementById('cntAvailable').textContent = avail;
+  document.getElementById('cntAbsent').textContent = roster.length - avail;
+
+  // список
+  const q = searchQuery.toLowerCase();
+  const filtered = roster.filter(e => {
+    if (q && !e.name.toLowerCase().includes(q) && !(e.department || '').toLowerCase().includes(q)) return false;
+    const a = activeAbsence(e);
+    switch (activeFilter) {
+      case 'all': return true;
+      case 'available': return isAvailable(e);
+      case 'absent': return !isAvailable(e);
+      default: return a && a.type === activeFilter;
+    }
+  });
+
+  const list = document.getElementById('list');
+  if (!filtered.length) {
+    list.innerHTML = '';
+    list.insertAdjacentHTML('beforebegin', '');
+    list.innerHTML = `<div class="empty-list">${roster.length ? 'Никто не найден по заданным условиям' : 'Справочник пуст — добавьте первого сотрудника'}</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(e => {
+    const a = activeAbsence(e);
+    const available = isAvailable(e);
+    const badge = available
+      ? (a && a.type === 'remote'
+          ? `<span class="badge remote">🏠 Удалённо</span>`
+          : `<span class="badge available">✔ На месте</span>`)
+      : `<span class="badge ${a.type}">${TYPES[a.type].icon} ${TYPES[a.type].label}</span>`;
+    const until = a && TYPES[a.type].blocks ? `<div class="until">до ${fmtDate(a.to)}</div>` : '';
+
+    const history = e.absences.length
+      ? e.absences.slice().sort((x, y) => y.from.localeCompare(x.from)).map(ab => `
+        <div class="absence-row">
+          <span class="badge ${ab.type}">${TYPES[ab.type].icon} ${TYPES[ab.type].label}</span>
+          <span class="dates">${fmtDate(ab.from)} — ${fmtDate(ab.to)}</span>
+          <span class="grow"></span>
+          <button class="icon-btn wa" title="Уведомить на WhatsApp" onclick="notifyAbsence('${e.id}','${ab.id}',event)">💬</button>
+          <button class="icon-btn" title="Удалить период" onclick="deleteAbsence('${e.id}','${ab.id}',event)">🗑️</button>
+          ${ab.comment ? `<span class="comment">${esc(ab.comment)}</span>` : ''}
+        </div>`).join('')
+      : `<div class="empty-absences">Периодов отсутствия нет</div>`;
+
+    return `
+    <div class="emp ${openedId === e.id ? 'open' : ''}" id="emp-${e.id}">
+      <div class="emp-head" onclick="toggleEmp('${e.id}')">
+        <div class="avatar" style="background:${avatarColor(e.id)}">${initials(e.name)}</div>
+        <div class="emp-info">
+          <div class="emp-name">${esc(e.name)}</div>
+          ${e.department ? `<div class="emp-dept">${esc(e.department)}</div>` : ''}
+        </div>
+        <div class="emp-status">${badge}${until}</div>
+      </div>
+      <div class="emp-body">
+        <div class="section-title">История отсутствий</div>
+        ${history}
+        <div class="section-title" style="margin-top:16px">Добавить период отсутствия</div>
+        <div class="add-absence">
+          <div>
+            <label class="f-label">Тип</label>
+            <select id="type-${e.id}">
+              ${Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join('')}
+            </select>
+          </div>
+          <div></div>
+          <div>
+            <label class="f-label">С даты</label>
+            <input type="date" id="from-${e.id}" value="${todayStr()}">
+          </div>
+          <div>
+            <label class="f-label">По дату</label>
+            <input type="date" id="to-${e.id}" value="${todayStr()}">
+          </div>
+          <div class="full">
+            <label class="f-label">Комментарий</label>
+            <input type="text" id="comment-${e.id}" placeholder="Необязательно">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="addAbsence('${e.id}')">Сохранить период</button>
+          <button class="btn-danger-link" onclick="deleteEmployee('${e.id}')">Удалить сотрудника</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ===== Действия ===== */
+function toggleEmp(id) {
+  openedId = openedId === id ? null : id;
+  render();
+}
+function addAbsence(empId) {
+  const emp = roster.find(e => e.id === empId);
+  const from = document.getElementById('from-' + empId).value;
+  const to = document.getElementById('to-' + empId).value;
+  if (!from || !to) { alert('Укажите даты начала и окончания.'); return; }
+  if (to < from) { alert('Дата окончания раньше даты начала.'); return; }
+  emp.absences.push({
+    id: uid(),
+    type: document.getElementById('type-' + empId).value,
+    from, to,
+    comment: document.getElementById('comment-' + empId).value.trim(),
+  });
+  save(); render();
+}
+function deleteAbsence(empId, absId, ev) {
+  ev.stopPropagation();
+  const emp = roster.find(e => e.id === empId);
+  emp.absences = emp.absences.filter(a => a.id !== absId);
+  save(); render();
+}
+function notifyAbsence(empId, absId, ev) {
+  ev.stopPropagation();
+  const emp = roster.find(e => e.id === empId);
+  const a = emp.absences.find(x => x.id === absId);
+  openWhatsApp(absenceText(emp, a));
+}
+function deleteEmployee(empId) {
+  const emp = roster.find(e => e.id === empId);
+  if (!confirm(`Удалить сотрудника «${emp.name}» из справочника?`)) return;
+  roster = roster.filter(e => e.id !== empId);
+  openedId = null;
+  save(); render();
+}
+
+/* ===== Обработчики ===== */
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  render();
+});
+document.getElementById('filters').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  activeFilter = chip.dataset.filter;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
+  render();
+});
+document.getElementById('btnSummary').addEventListener('click', () => openWhatsApp(summaryText()));
+
+// модалка добавления сотрудника
+const overlay = document.getElementById('modalOverlay');
+document.getElementById('btnAddEmp').addEventListener('click', () => {
+  document.getElementById('newName').value = '';
+  document.getElementById('newDept').value = '';
+  overlay.classList.add('open');
+  document.getElementById('newName').focus();
+});
+document.getElementById('btnCancelEmp').addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+document.getElementById('btnSaveEmp').addEventListener('click', () => {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { alert('ФИО обязательно.'); return; }
+  roster.push({ id: uid(), name, department: document.getElementById('newDept').value.trim(), absences: [] });
+  overlay.classList.remove('open');
+  save(); render();
+});
+
+render();
+// автообновление счётчиков при смене дня
+setInterval(render, 60 * 1000);
+</script>
+</body>
+</html>
