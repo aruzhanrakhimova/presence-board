@@ -60,12 +60,21 @@
     background: linear-gradient(90deg, var(--kmg-cyan) 0%, var(--kmg-cyan) 50%, var(--kmg-green) 50%, var(--kmg-green) 100%);
   }
   .company {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 14px;
     margin-bottom: 14px;
     padding-bottom: 14px;
     border-bottom: 1px solid rgba(255,255,255,.18);
+    flex-wrap: wrap;
   }
-  .company svg { flex-shrink: 0; }
+  .logo-plate {
+    background: #fff;
+    border-radius: 10px;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .logo-plate img { height: 32px; display: block; }
   .company-name { font-size: 16px; font-weight: 800; letter-spacing: .02em; }
   .company-sub { font-size: 11.5px; opacity: .75; margin-top: 1px; text-transform: uppercase; letter-spacing: .08em; }
   .board-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
@@ -257,11 +266,9 @@
   <!-- Табло -->
   <div class="board">
     <div class="company">
-      <svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <polygon points="6,26 13,13 20,26" fill="#00a9e0"/>
-        <polygon points="13,26 20,13 27,26" fill="#78be20" opacity="0.92"/>
-        <polygon points="13,13 17,6 24,19 20,26" fill="#ffffff" opacity="0.25"/>
-      </svg>
+      <div class="logo-plate">
+        <img src="kmg-logo.svg" alt="Логотип КазМунайГаз">
+      </div>
       <div>
         <div class="company-name">ТОО «КМГ Карачаганак»</div>
         <div class="company-sub">Группа компаний КазМунайГаз</div>
